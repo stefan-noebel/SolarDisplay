@@ -86,6 +86,9 @@ void drawRefresh(){
 
   //char countText[8];
   //snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
+  // Cacluclate bars sizes
+  tbh = nearbyint(ACpower / 600 * 94);
+  tbw = nearbyint(ACdaily / 5 * 198);
 
   // Fonts need scaling factor 1.333 compared to GIMP sketch
   //display.setFont(&FreeSansBold32pt7b);
@@ -110,14 +113,18 @@ void drawRefresh(){
     display.printf("%3.0f", ACpower); //needs 32pt fonts for correct scaling, workaround: use 18pt + scaling factor 2
     display.setFont(&FreeSansBold18pt7b);
     display.setCursor(68, 128);
-    display.printf("%1.2f", ACdaily);
+    display.printf("%1.1f", ACdaily);
     display.setCursor(68, 199);
     display.printf("%4.0f", ACtotal);
+    //
+    // dynamic bars
+    display.fillRect(165, 1, 32, tbh, GxEPD_BLACK);
+    display.fillRect(1, 133, tbw, 14, GxEPD_BLACK);
     //
     // static text
     display.setFont(&FreeSans18pt7b);
     //display.setTextSize(1);
-    display.setCursor(104, 79);
+    display.setCursor(106, 79);
     display.print("W");
     display.setFont(&FreeSans12pt7b); //12pt instead of 9 pt = factor 1.3333
     display.setCursor(0, 17);
@@ -132,7 +139,7 @@ void drawRefresh(){
     display.drawRect(0, 171, 200, 2, GxEPD_BLACK);
     display.setCursor(0, 128);
     display.print("heute");
-    display.setCursor(136, 128);
+    display.setCursor(117, 128);
     display.print("kWh");
     display.setCursor(0, 167);
     display.print("0");
@@ -140,7 +147,7 @@ void drawRefresh(){
     display.print("5");
     display.setCursor(0, 199);
     display.print("total");
-    display.setCursor(145, 199);
+    display.setCursor(146, 199);
     display.print("kWh");
   }
   while (display.nextPage());
