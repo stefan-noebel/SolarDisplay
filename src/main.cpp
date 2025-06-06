@@ -39,7 +39,11 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 
 // Use two fonts for two different text sizes. 
 #include <Fonts/FreeSansBold24pt7b.h> //Large font uses a lot of memory
-#include <Fonts/FreeSansBold12pt7b.h>
+//#include <Fonts/FreeSansBold18pt7b.h>
+#include <Fonts/FreeSans18pt7b.h>
+#include <Fonts/FreeSans12pt7b.h>
+#include <Fonts/FreeSans9pt7b.h>
+#include <FreeSansBold32pt7b.h>
 
 // select the display class and display driver class in the following file (new style):
 #include "GxEPD2_display_selection_new_style.h"
@@ -80,14 +84,16 @@ void drawGreeting()
 // Print actual data
 void drawRefresh(){
 
-  char countText[8];
-  snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
+  //char countText[8];
+  //snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
 
-  display.setFont(&FreeSansBold24pt7b);
+  // Fonts need scaling factor 1.333 compared to GIMP sketch
+  display.setFont(&FreeSansBold32pt7b);
+  //display.setTextSize(2);
   display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
-  display.getTextBounds(countText, 0, 0, &tbx, &tby, &tbw, &tbh);
-  uint16_t x2 = ((display.width() - tbw) * 1 / 4) - tbx;
-  uint16_t y2 = ((display.height() - tbh) * 1 / 4) - tby;
+  //display.getTextBounds(countText, 0, 0, &tbx, &tby, &tbw, &tbh);
+  //uint16_t x2 = ((display.width() - tbw) * 1 / 4) - tbx;
+  //uint16_t y2 = ((display.height() - tbh) * 1 / 4) - tby;
   //args are(x-start, y-start, x-end, y-end)
   //absolute on display. This covers the top half.
   display.setPartialWindow(0, 0, display.width(), display.height() / 2);
@@ -95,8 +101,17 @@ void drawRefresh(){
   display.firstPage();
   do {
     // display.fillScreen(GxEPD_WHITE);
-    display.setCursor(x2, y2);
-    display.print(countText);
+    //display.setCursor(x2, y2);
+    //display.setTextSize(2);
+    display.setCursor(0, 79);
+    display.printf("%3.0f", ACpower); //needs 32pt fonts for correct scaling, workaround: use 18pt + scaling factor 2
+    display.setFont(&FreeSans18pt7b);
+    //display.setTextSize(1);
+    display.setCursor(104, 79);
+    display.print("W");
+    display.setFont(&FreeSans12pt7b); //12pt instead of 9 pt = factor 1.3333
+    display.setCursor(0, 17);
+    display.print("Leistung");
     // display.drawRect(0, display.height() / 2, display.width(), display.height(), GxEPD_BLACK);
   }
   while (display.nextPage());
