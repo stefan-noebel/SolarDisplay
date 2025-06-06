@@ -33,6 +33,7 @@ ESP8266WiFiMulti wifiMulti;
 // InfluxDB client instance with preconfigured InfluxCloud certificate
 InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKEN, InfluxDbCloud2CACert);
 
+// Include ePaper Display library
 #include <GxEPD2_BW.h> // including both doesn't use more code or ram
 #include <GxEPD2_3C.h> // including both doesn't use more code or ram
 
@@ -43,15 +44,18 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 // select the display class and display driver class in the following file (new style):
 #include "GxEPD2_display_selection_new_style.h"
 
-//1.54" screen is 200x200pixels
+//Define global constants and variables
 const char greeting[] = "Solar";
 const uint16_t refreshrate = 5000;
-double_t power = 0;
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
-// Print message in large text across the top of the screen
-void drawFull()
+double_t ACpower = 0;
+double_t ACtotal = 0;
+double_t ACdaily = 0;
+
+// Print initial message in large text across the top of the screen
+void drawGreeting()
 {
   display.setFont(&FreeSansBold24pt7b); //This almost fills the screen with "Wednesday"
   display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
@@ -68,31 +72,36 @@ void drawFull()
     display.print(greeting);
   }
   while (display.nextPage());
+
+  //sent display to sleep
+  display.hibernate();
 }
 
-void drawPartial(){
+// Print actual data
+void drawRefresh(){
 
-  char countText[15];
-  snprintf(countText, sizeof(countText), "Power: %3.1f W", power);
+  char countText[8];
+  snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
 
-  display.setFont(&FreeSansBold12pt7b);
+  display.setFont(&FreeSansBold24pt7b);
   display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
   display.getTextBounds(countText, 0, 0, &tbx, &tby, &tbw, &tbh);
-  uint16_t x2 = ((display.width() - tbw) / 2) - tbx;
-  uint16_t y2 = ((display.height() - tbh) * 3 / 4) - tby;
+  uint16_t x2 = ((display.width() - tbw) * 1 / 4) - tbx;
+  uint16_t y2 = ((display.height() - tbh) * 1 / 4) - tby;
   //args are(x-start, y-start, x-end, y-end)
-  //absolute on display. This covers the bottom half.
-  //display.setPartialWindow(0, display.height() / 2, display.width(), display.height());
-  display.setFullWindow();
+  //absolute on display. This covers the top half.
+  display.setPartialWindow(0, 0, display.width(), display.height() / 2);
+  //display.setFullWindow();
   display.firstPage();
   do {
-    display.fillScreen(GxEPD_WHITE);
+    // display.fillScreen(GxEPD_WHITE);
     display.setCursor(x2, y2);
     display.print(countText);
-    //display.drawRect(0, display.height() / 2, display.width(), display.height(), GxEPD_BLACK);
+    // display.drawRect(0, display.height() / 2, display.width(), display.height(), GxEPD_BLACK);
   }
   while (display.nextPage());
   // and put the display to sleep, even if it's only for a short time
+  display.powerOff();
   display.hibernate();
   // delay(refreshrate);
 }
@@ -116,7 +125,7 @@ void setup()
    // Accurate time is necessary for certificate validation
    // For the fastest time sync find NTP servers in your area: https://www.pool.ntp.org/zone/
    // Syncing progress and the time will be printed to Serial
-   timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
+   timeSync(TZ_INFO, "fritz.box");
  
    // Check server connection
    if (client.validateConnection()) {
@@ -129,9 +138,9 @@ void setup()
   
   display.init(115200, true, 2, false);
   display.setRotation(1); //0 is 'portrait'
+  
   // draw full screen greeter first
-  drawFull();
-  display.hibernate();
+  drawGreeting();
 }
 
 void loop() {
@@ -141,7 +150,7 @@ void loop() {
   String query = "from(bucket: \"" INFLUXDB_BUCKET "\") |> range(start: -24h) \
      |> filter(fn: (r) => r._measurement == \"solar\") \
      |> filter(fn: (r) => r.device == \"Solar\") \
-     |> filter(fn: (r) => r.feature == \"AC-power\") \
+     |> filter(fn: (r) => r.feature =~ /^AC-*/) \
      |> last()";
  
   Serial.println("==== List results ====");
@@ -149,6 +158,7 @@ void loop() {
   // Print composed query
   Serial.print("Querying with: ");
   Serial.println(query);
+  Serial.println();
  
   // Send query to the server and get result
   FluxQueryResult result = client.query(query);
@@ -156,22 +166,52 @@ void loop() {
   // Print only value and timestamp as table
   //Iterate over rows. Even there is just one row, next() must be called at least once.
   while (result.next()) {
- 
-    power = result.getValueByName("_value").getDouble();
-    Serial.print(power);
- 
+    // Extract values from results
+    //for(FluxValue &val: result.getValues()) {
+    //  // Check whether the value is null
+    //  if(!val.isNull()) {
+    //    // Use raw string, unconverted value
+    //    Serial.print(val.getRawValue());
+    //    Serial.print("  ");
+    //  }
+    //}
+    //Serial.println();
+    // Fallunterscheidung nach AC-power, AC-daily und AC-total unter feature
+    String feature = result.getValueByName("feature").getString();
+    Serial.print(feature);
+    Serial.print(":  ");
+    double value = result.getValueByName("_value").getDouble();
+    Serial.print(value);
+
     // Get converted value for the _time column
-    FluxDateTime time = result.getValueByName("_time").getDateTime();
+    FluxDateTime ACtime = result.getValueByName("_time").getDateTime();
  
     // Format date-time for printing
     // Format string according to http://www.cplusplus.com/reference/ctime/strftime/
-    String timeStr = time.format("%F %T %z");
+    String timeStr = ACtime.format("%T");
 
     Serial.print(" at ");
     Serial.print(timeStr);
-     
+
     Serial.println();
+
+    if (feature == "AC-power")
+    {
+      ACpower = value;
+    }
+    
+    if (feature == "AC-daily")
+    {
+      ACdaily = value;
+    }
+    
+    if (feature == "AC-total")
+    {
+      ACtotal = value;
+    }
   }
+  Serial.println();
+
 
   // Check if there was an error
   if (result.getError().length() > 0) {
@@ -182,10 +222,10 @@ void loop() {
   // Close the result
   result.close();
 
+  // Print actual values on display
+  drawRefresh();
+
   // Wait for length of $refresharate
   Serial.printf("Wait %i s\n", refreshrate);
   delay(refreshrate);
-
-  drawPartial();
-  //display.hibernate();
 }
