@@ -38,11 +38,11 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 #include <GxEPD2_3C.h> // including both doesn't use more code or ram
 
 // Use two fonts for two different text sizes. 
-#include <Fonts/FreeSansBold24pt7b.h> //Large font uses a lot of memory
-//#include <Fonts/FreeSansBold18pt7b.h>
+//#include <Fonts/FreeSansBold24pt7b.h> //Large font uses a lot of memory
+#include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSans18pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
-#include <Fonts/FreeSans9pt7b.h>
+//#include <Fonts/FreeSans9pt7b.h>
 #include <FreeSansBold32pt7b.h>
 
 // select the display class and display driver class in the following file (new style):
@@ -61,7 +61,7 @@ double_t ACdaily = 0;
 // Print initial message in large text across the top of the screen
 void drawGreeting()
 {
-  display.setFont(&FreeSansBold24pt7b); //This almost fills the screen with "Wednesday"
+  display.setFont(&FreeSansBold32pt7b); //This almost fills the screen with "Wednesday"
   display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
   display.getTextBounds(greeting, 0, 0, &tbx, &tby, &tbw, &tbh);
   // center the bounding box by transposition of the origin:
@@ -88,7 +88,7 @@ void drawRefresh(){
   //snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
 
   // Fonts need scaling factor 1.333 compared to GIMP sketch
-  display.setFont(&FreeSansBold32pt7b);
+  //display.setFont(&FreeSansBold32pt7b);
   //display.setTextSize(2);
   display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
   //display.getTextBounds(countText, 0, 0, &tbx, &tby, &tbw, &tbh);
@@ -96,15 +96,25 @@ void drawRefresh(){
   //uint16_t y2 = ((display.height() - tbh) * 1 / 4) - tby;
   //args are(x-start, y-start, x-end, y-end)
   //absolute on display. This covers the top half.
-  display.setPartialWindow(0, 0, display.width(), display.height() / 2);
+  display.setPartialWindow(0, 0, display.width(), display.height());
   //display.setFullWindow();
   display.firstPage();
   do {
+    //
+    // dynamic text
     // display.fillScreen(GxEPD_WHITE);
     //display.setCursor(x2, y2);
     //display.setTextSize(2);
+    display.setFont(&FreeSansBold32pt7b);
     display.setCursor(0, 79);
     display.printf("%3.0f", ACpower); //needs 32pt fonts for correct scaling, workaround: use 18pt + scaling factor 2
+    display.setFont(&FreeSansBold18pt7b);
+    display.setCursor(68, 128);
+    display.printf("%1.2f", ACdaily);
+    display.setCursor(68, 199);
+    display.printf("%4.0f", ACtotal);
+    //
+    // static text
     display.setFont(&FreeSans18pt7b);
     //display.setTextSize(1);
     display.setCursor(104, 79);
@@ -112,7 +122,26 @@ void drawRefresh(){
     display.setFont(&FreeSans12pt7b); //12pt instead of 9 pt = factor 1.3333
     display.setCursor(0, 17);
     display.print("Leistung");
-    // display.drawRect(0, display.height() / 2, display.width(), display.height(), GxEPD_BLACK);
+    display.setCursor(124, 17);
+    display.print("600");
+    display.setCursor(150, 95);
+    display.print("0");
+    display.drawRect(164, 0, 35, 96, GxEPD_BLACK);
+    display.drawRect(0, 99, 200, 2, GxEPD_BLACK);
+    display.drawRect(0, 132, 200, 16, GxEPD_BLACK);
+    display.drawRect(0, 171, 200, 2, GxEPD_BLACK);
+    display.setCursor(0, 128);
+    display.print("heute");
+    display.setCursor(136, 128);
+    display.print("kWh");
+    display.setCursor(0, 167);
+    display.print("0");
+    display.setCursor(188, 167);
+    display.print("5");
+    display.setCursor(0, 199);
+    display.print("total");
+    display.setCursor(145, 199);
+    display.print("kWh");
   }
   while (display.nextPage());
   // and put the display to sleep, even if it's only for a short time
