@@ -6,9 +6,10 @@
 // Wiring for AVR, UNO, NANO etc.
 // BUSY -> 7, RST -> 9, DC -> 8, CS-> 10, CLK -> 13, DIN -> 11
 #include <Arduino.h>
-#include <secrets.h> // Include your secrets.h file with the following variables defined:
-// WIFI_SSID, WIFI_PASSWORD, INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKEN
+#include <secrets.h> // Include secrets.h for WiFi and InfluxDB credentials
 
+
+// Include ESP32 and WiFi libraries
 #if defined(ESP32)
 #include <WiFiMulti.h>
 WiFiMulti wifiMulti;
@@ -19,6 +20,7 @@ ESP8266WiFiMulti wifiMulti;
 #define DEVICE "ESP8266"
 #endif
 
+// Include Influx Client library
 #include <InfluxDbClient.h>
 #include <InfluxDbCloud.h>
 
@@ -84,6 +86,15 @@ void drawGreeting()
 // Print actual data
 void drawRefresh(){
 
+  // next steps
+  // (0) Secrets sicher abspeichern
+  // (1) statisch und dynamisch trennen -> 2 Funktionen für unterschiedlichen Aufruf
+  // (1) Funktion fetchinfluxdb ausgliedern
+  // (2) Code bereinigen und auf Github etc.
+  // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
+  // (3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup
+  // (4) Ladeschaltung verbinden
+
   //char countText[8];
   //snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
   // Cacluclate bars sizes
@@ -118,7 +129,7 @@ void drawRefresh(){
     display.printf("%4.0f", ACtotal);
     //
     // dynamic bars
-    display.fillRect(165, 1, 32, tbh, GxEPD_BLACK);
+    display.fillRect(165, 95 - tbh, 32, tbh, GxEPD_BLACK);
     display.fillRect(1, 133, tbw, 14, GxEPD_BLACK);
     //
     // static text
@@ -248,17 +259,17 @@ void loop() {
 
     if (feature == "AC-power")
     {
-      ACpower = value;
+      ACpower = value; // in W
     }
     
     if (feature == "AC-daily")
     {
-      ACdaily = value;
+      ACdaily = value; // in kWh
     }
     
     if (feature == "AC-total")
     {
-      ACtotal = value;
+      ACtotal = value; // in kWh
     }
   }
   Serial.println();
