@@ -90,7 +90,7 @@ void drawRefresh(){
   // ~~~(0) Secrets sicher abspeichern~~~
   // ~~~(1) statisch und dynamisch trennen -> 2 Funktionen für unterschiedlichen Aufruf~~~
   // -> funtioniert nicht, da partial refresh nur für Koordinaten mit ganzahlige Vielfachen von 8 möglich sind
-  // (1) Funktion fetchinfluxdb ausgliedern
+  // ~~~(1) Funktion fetchinfluxdb ausgliedern~~~
   // (2) Code bereinigen und auf Github etc.
   // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
   // (3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup
@@ -169,44 +169,8 @@ void drawRefresh(){
   // delay(refreshrate);
 }
 
-// Run once
-void setup()
+void fetchInfluxDB()
 {
-  Serial.begin(115200);
- 
-   // Setup wifi
-   WiFi.mode(WIFI_STA);
-   wifiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
- 
-   Serial.print("Connecting to wifi");
-   while (wifiMulti.run() != WL_CONNECTED) {
-     Serial.print(".");
-     delay(500);
-   }
-   Serial.println();
- 
-   // Accurate time is necessary for certificate validation
-   // For the fastest time sync find NTP servers in your area: https://www.pool.ntp.org/zone/
-   // Syncing progress and the time will be printed to Serial
-   timeSync(TZ_INFO, "fritz.box");
- 
-   // Check server connection
-   if (client.validateConnection()) {
-     Serial.print("Connected to InfluxDB: ");
-     Serial.println(client.getServerUrl());
-   } else {
-     Serial.print("InfluxDB connection failed: ");
-     Serial.println(client.getLastErrorMessage());
-   }
-  
-  display.init(115200, true, 2, false);
-  display.setRotation(1); //0 is 'portrait'
-  
-  // draw full screen greeter first
-  drawGreeting();
-}
-
-void loop() {
   // Construct a Flux query
   // Query will list RSSI for last 24 hours for each connected WiFi network of this device type
   // String query = "from(bucket: \"" INFLUXDB_BUCKET "\") |> range(start: -1h)";
@@ -284,6 +248,48 @@ void loop() {
 
   // Close the result
   result.close();
+}
+
+// Run once
+void setup()
+{
+  Serial.begin(115200);
+ 
+  // Setup wifi
+  WiFi.mode(WIFI_STA);
+  wifiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
+ 
+  Serial.print("Connecting to wifi");
+  while (wifiMulti.run() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+ 
+  // Accurate time is necessary for certificate validation
+  // For the fastest time sync find NTP servers in your area: https://www.pool.ntp.org/zone/
+  // Syncing progress and the time will be printed to Serial
+  timeSync(TZ_INFO, "fritz.box");
+ 
+  // Check server connection
+  if (client.validateConnection()) {
+    Serial.print("Connected to InfluxDB: ");
+    Serial.println(client.getServerUrl());
+  } else {
+    Serial.print("InfluxDB connection failed: ");
+    Serial.println(client.getLastErrorMessage());
+  }
+  
+  display.init(115200, true, 2, false);
+  display.setRotation(1); //0 is 'portrait'
+  
+  // draw full screen greeter first
+  drawGreeting();
+}
+
+void loop() {
+  // Fetch data from InfluxDB
+  fetchInfluxDB();
 
   // Print actual values on display
   drawRefresh();
