@@ -88,7 +88,8 @@ void drawRefresh(){
 
   // next steps
   // ~~~(0) Secrets sicher abspeichern~~~
-  // (1) statisch und dynamisch trennen -> 2 Funktionen für unterschiedlichen Aufruf
+  // ~~~(1) statisch und dynamisch trennen -> 2 Funktionen für unterschiedlichen Aufruf~~~
+  // -> funtioniert nicht, da partial refresh nur für Koordinaten mit ganzahlige Vielfachen von 8 möglich sind
   // (1) Funktion fetchinfluxdb ausgliedern
   // (2) Code bereinigen und auf Github etc.
   // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
