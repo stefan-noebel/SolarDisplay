@@ -269,7 +269,7 @@ void setup()
   // Accurate time is necessary for certificate validation
   // For the fastest time sync find NTP servers in your area: https://www.pool.ntp.org/zone/
   // Syncing progress and the time will be printed to Serial
-  timeSync(TZ_INFO, "fritz.box");
+  timeSync(TZ_INFO, "fritz.box", "pool.ntp.org");
  
   // Check server connection
   if (client.validateConnection()) {
