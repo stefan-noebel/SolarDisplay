@@ -50,19 +50,211 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 // select the display class and display driver class in the following file (new style):
 #include "GxEPD2_display_selection_new_style.h"
 
-// Include local header files
-#include "display_utils.h"
-#include "influxdb_utils.h"
-
 //Define global constants and variables
 const char greeting[] = "Solar";
 const uint16_t refreshrate = 5000;
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
-double_t ACpower = 0;
-double_t ACtotal = 0;
-double_t ACdaily = 0;
+//double_t ACpower = 0;
+//double_t ACtotal = 0;
+//double_t ACdaily = 0;
+
+struct SolarData {
+    double_t ACpower = 0;
+    double_t ACtotal = 0;
+    double_t ACdaily = 0;
+};
+
+// Print initial message in large text across the top of the screen
+void drawGreeting()
+{
+  display.setFont(&FreeSansBold32pt7b); //This almost fills the screen with "Wednesday"
+  display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
+  display.getTextBounds(greeting, 0, 0, &tbx, &tby, &tbw, &tbh);
+  // center the bounding box by transposition of the origin:
+  uint16_t x1 = ((display.width() - tbw) / 2) - tbx;  // centres the text
+  uint16_t y1 = ((display.height() - tbh) / 4) - tby; // Aligned in top half
+  display.setFullWindow();
+  display.firstPage();
+  do // Print the upper part of the screen
+  {
+    display.fillScreen(GxEPD_WHITE);
+    display.setCursor(x1, y1);
+    display.print(greeting);
+  }
+  while (display.nextPage());
+
+  //sent display to sleep
+  display.hibernate();
+}
+
+// Print actual data
+void drawRefresh(SolarData &data){
+
+  // next steps
+  // ~~~(0) Secrets sicher abspeichern~~~
+  // ~~~(1) statisch und dynamisch trennen -> 2 Funktionen für unterschiedlichen Aufruf~~~
+  // -> funtioniert nicht, da partial refresh nur für Koordinaten mit ganzahlige Vielfachen von 8 möglich sind
+  // ~~~(1) Funktion fetchinfluxdb ausgliedern~~~
+  // (2) Code bereinigen und auf Github etc.
+  // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
+  // (3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup
+  // (4) Ladeschaltung verbinden
+
+  //char countText[8];
+  //snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
+  // Cacluclate bars sizes
+  tbh = nearbyint(data.ACpower / 600 * 94);
+  tbw = nearbyint(data.ACdaily / 5 * 198);
+
+  // Fonts need scaling factor 1.333 compared to GIMP sketch
+  //display.setFont(&FreeSansBold32pt7b);
+  //display.setTextSize(2);
+  display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
+  //display.getTextBounds(countText, 0, 0, &tbx, &tby, &tbw, &tbh);
+  //uint16_t x2 = ((display.width() - tbw) * 1 / 4) - tbx;
+  //uint16_t y2 = ((display.height() - tbh) * 1 / 4) - tby;
+  //args are(x-start, y-start, x-end, y-end)
+  //absolute on display. This covers the top half.
+  display.setPartialWindow(0, 0, display.width(), display.height());
+  //display.setFullWindow();
+  display.firstPage();
+  do {
+    //
+    // dynamic text
+    // display.fillScreen(GxEPD_WHITE);
+    //display.setCursor(x2, y2);
+    //display.setTextSize(2);
+    display.setFont(&FreeSansBold32pt7b);
+    display.setCursor(0, 79);
+    display.printf("%3.0f", data.ACpower); //needs 32pt fonts for correct scaling, workaround: use 18pt + scaling factor 2
+    display.setFont(&FreeSansBold18pt7b);
+    display.setCursor(68, 128);
+    display.printf("%1.1f", data.ACdaily);
+    display.setCursor(68, 199);
+    display.printf("%4.0f", data.ACtotal);
+    //
+    // dynamic bars
+    display.fillRect(165, 95 - tbh, 32, tbh, GxEPD_BLACK);
+    display.fillRect(1, 133, tbw, 14, GxEPD_BLACK);
+    //
+    // static text
+    display.setFont(&FreeSans18pt7b);
+    //display.setTextSize(1);
+    display.setCursor(106, 79);
+    display.print("W");
+    display.setFont(&FreeSans12pt7b); //12pt instead of 9 pt = factor 1.3333
+    display.setCursor(0, 17);
+    display.print("Leistung");
+    display.setCursor(124, 17);
+    display.print("600");
+    display.setCursor(150, 95);
+    display.print("0");
+    display.drawRect(164, 0, 35, 96, GxEPD_BLACK);
+    display.drawRect(0, 99, 200, 2, GxEPD_BLACK);
+    display.drawRect(0, 132, 200, 16, GxEPD_BLACK);
+    display.drawRect(0, 171, 200, 2, GxEPD_BLACK);
+    display.setCursor(0, 128);
+    display.print("heute");
+    display.setCursor(117, 128);
+    display.print("kWh");
+    display.setCursor(0, 167);
+    display.print("0");
+    display.setCursor(188, 167);
+    display.print("5");
+    display.setCursor(0, 199);
+    display.print("total");
+    display.setCursor(146, 199);
+    display.print("kWh");
+  }
+  while (display.nextPage());
+  // and put the display to sleep, even if it's only for a short time
+  display.powerOff();
+  display.hibernate();
+  // delay(refreshrate);
+}
+
+void fetchInfluxDB(SolarData &data)
+{
+  // Construct a Flux query
+  // Query will list RSSI for last 24 hours for each connected WiFi network of this device type
+  // String query = "from(bucket: \"" INFLUXDB_BUCKET "\") |> range(start: -1h)";
+  String query = "from(bucket: \"" INFLUXDB_BUCKET "\") |> range(start: -24h) \
+     |> filter(fn: (r) => r._measurement == \"solar\") \
+     |> filter(fn: (r) => r.device == \"Solar\") \
+     |> filter(fn: (r) => r.feature =~ /^AC-*/) \
+     |> last()";
+ 
+  Serial.println("==== List results ====");
+ 
+  // Print composed query
+  Serial.print("Querying with: ");
+  Serial.println(query);
+  Serial.println();
+ 
+  // Send query to the server and get result
+  FluxQueryResult result = client.query(query);
+ 
+  // Print only value and timestamp as table
+  //Iterate over rows. Even there is just one row, next() must be called at least once.
+  while (result.next()) {
+    // Extract values from results
+    //for(FluxValue &val: result.getValues()) {
+    //  // Check whether the value is null
+    //  if(!val.isNull()) {
+    //    // Use raw string, unconverted value
+    //    Serial.print(val.getRawValue());
+    //    Serial.print("  ");
+    //  }
+    //}
+    //Serial.println();
+    // Fallunterscheidung nach AC-power, AC-daily und AC-total unter feature
+    String feature = result.getValueByName("feature").getString();
+    Serial.print(feature);
+    Serial.print(":  ");
+    double value = result.getValueByName("_value").getDouble();
+    Serial.print(value);
+
+    // Get converted value for the _time column
+    FluxDateTime ACtime = result.getValueByName("_time").getDateTime();
+ 
+    // Format date-time for printing
+    // Format string according to http://www.cplusplus.com/reference/ctime/strftime/
+    String timeStr = ACtime.format("%T");
+
+    Serial.print(" at ");
+    Serial.print(timeStr);
+
+    Serial.println();
+
+    if (feature == "AC-power")
+    {
+      data.ACpower = value; // in W
+    }
+    
+    if (feature == "AC-daily")
+    {
+      data.ACdaily = value; // in kWh
+    }
+    
+    if (feature == "AC-total")
+    {
+      data.ACtotal = value; // in kWh
+    }
+  }
+  Serial.println();
+
+
+  // Check if there was an error
+  if (result.getError().length() > 0) {
+    Serial.print("Query result error: ");
+    Serial.println(result.getError());
+  }
+
+  // Close the result
+  result.close();
+}
 
 // Run once
 void setup()
@@ -102,11 +294,14 @@ void setup()
 }
 
 void loop() {
+  // Create a SolarData instance to hold the data
+  SolarData ACdata;
+  
   // Fetch data from InfluxDB
-  fetchInfluxDB();
+  fetchInfluxDB(ACdata);
 
   // Print actual values on display
-  drawRefresh();
+  drawRefresh(ACdata);
 
   // Wait for length of $refresharate
   Serial.printf("Wait %i s\n", refreshrate);
