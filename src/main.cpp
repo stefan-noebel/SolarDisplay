@@ -56,9 +56,17 @@ const uint16_t refreshrate = 5000;
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
-double_t ACpower = 0;
-double_t ACtotal = 0;
-double_t ACdaily = 0;
+//double_t ACpower = 0;
+//double_t ACtotal = 0;
+//double_t ACdaily = 0;
+
+struct SolarData {
+    double_t ACpower = 0;
+    double_t ACtotal = 0;
+    double_t ACdaily = 0;
+};
+
+SolarData ACdata;
 
 // Print initial message in large text across the top of the screen
 void drawGreeting()
@@ -84,7 +92,7 @@ void drawGreeting()
 }
 
 // Print actual data
-void drawRefresh(){
+void drawRefresh(SolarData &data){
 
   // next steps
   // ~~~(0) Secrets sicher abspeichern~~~
@@ -99,8 +107,8 @@ void drawRefresh(){
   //char countText[8];
   //snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
   // Cacluclate bars sizes
-  tbh = nearbyint(ACpower / 600 * 94);
-  tbw = nearbyint(ACdaily / 5 * 198);
+  tbh = nearbyint(data.ACpower / 600 * 94);
+  tbw = nearbyint(data.ACdaily / 5 * 198);
 
   // Fonts need scaling factor 1.333 compared to GIMP sketch
   //display.setFont(&FreeSansBold32pt7b);
@@ -122,12 +130,12 @@ void drawRefresh(){
     //display.setTextSize(2);
     display.setFont(&FreeSansBold32pt7b);
     display.setCursor(0, 79);
-    display.printf("%3.0f", ACpower); //needs 32pt fonts for correct scaling, workaround: use 18pt + scaling factor 2
+    display.printf("%3.0f", data.ACpower); //needs 32pt fonts for correct scaling, workaround: use 18pt + scaling factor 2
     display.setFont(&FreeSansBold18pt7b);
     display.setCursor(68, 128);
-    display.printf("%1.1f", ACdaily);
+    display.printf("%1.1f", data.ACdaily);
     display.setCursor(68, 199);
-    display.printf("%4.0f", ACtotal);
+    display.printf("%4.0f", data.ACtotal);
     //
     // dynamic bars
     display.fillRect(165, 95 - tbh, 32, tbh, GxEPD_BLACK);
@@ -169,7 +177,7 @@ void drawRefresh(){
   // delay(refreshrate);
 }
 
-void fetchInfluxDB()
+void fetchInfluxDB(SolarData &data)
 {
   // Construct a Flux query
   // Query will list RSSI for last 24 hours for each connected WiFi network of this device type
@@ -224,17 +232,17 @@ void fetchInfluxDB()
 
     if (feature == "AC-power")
     {
-      ACpower = value; // in W
+      data.ACpower = value; // in W
     }
     
     if (feature == "AC-daily")
     {
-      ACdaily = value; // in kWh
+      data.ACdaily = value; // in kWh
     }
     
     if (feature == "AC-total")
     {
-      ACtotal = value; // in kWh
+      data.ACtotal = value; // in kWh
     }
   }
   Serial.println();
@@ -289,10 +297,10 @@ void setup()
 
 void loop() {
   // Fetch data from InfluxDB
-  fetchInfluxDB();
+  fetchInfluxDB(ACdata);
 
   // Print actual values on display
-  drawRefresh();
+  drawRefresh(ACdata);
 
   // Wait for length of $refresharate
   Serial.printf("Wait %i s\n", refreshrate);
