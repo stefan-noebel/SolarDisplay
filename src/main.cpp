@@ -66,6 +66,8 @@ struct SolarData {
     double_t ACdaily = 0;
 };
 
+SolarData ACdata;
+
 // Print initial message in large text across the top of the screen
 void drawGreeting()
 {
@@ -294,9 +296,6 @@ void setup()
 }
 
 void loop() {
-  // Create a SolarData instance to hold the data
-  SolarData ACdata;
-  
   // Fetch data from InfluxDB
   fetchInfluxDB(ACdata);
 
