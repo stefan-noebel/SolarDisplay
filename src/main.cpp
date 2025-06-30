@@ -53,7 +53,7 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 
 //Define global constants and variables
 const char greeting[] = "Solar";
-const uint16_t refreshrate = 5; // Refresh rate in seconds, set to 5 seconds for testing, change to 3600 for hourly updates
+const uint16_t refreshrate = 10; // Refresh rate in seconds, set to 10 s for testing, change to 600 for 10 min updates
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
@@ -103,6 +103,7 @@ void drawRefresh(SolarData &data){
   // (2) Code bereinigen und auf Github etc.
   // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
   // (3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup
+  // (3) Upload mode per PIN setzen, um dfu-util nutzen zu können
   // (4) Ladeschaltung verbinden
 
   //char countText[8];
@@ -293,7 +294,7 @@ void setup()
   display.setRotation(1); //0 is 'portrait'
   
   // draw full screen greeter first
-  drawGreeting();
+  //drawGreeting();
 
   // Fetch data from InfluxDB
   fetchInfluxDB(ACdata);
