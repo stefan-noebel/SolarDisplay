@@ -264,6 +264,19 @@ void fetchInfluxDB(SolarData &data)
 void setup()
 {
   Serial.begin(115200);
+  pinMode(D2, INPUT_PULLUP);
+
+  // Check for upload mode before deep sleep
+  if (digitalRead(D2) == LOW) {
+    delay(5000);
+    Serial.println("UPLOAD MODE: Staying awake 30 s for firmware upload/debug.");
+    for (size_t i = 0; i < 30; i++)
+    {
+      Serial.print("."); // Print dots to indicate that the device is awake
+      delay(1000);
+    }
+    Serial.println();
+  }
  
   // Setup wifi
   WiFi.mode(WIFI_STA);
