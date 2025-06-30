@@ -6,6 +6,7 @@
 // Wiring for AVR, UNO, NANO etc.
 // BUSY -> 7, RST -> 9, DC -> 8, CS-> 10, CLK -> 13, DIN -> 11
 #include <Arduino.h>
+#include <esp_sleep.h>
 #include <secrets.h> // Include secrets.h for WiFi and InfluxDB credentials
 
 
@@ -52,7 +53,7 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 
 //Define global constants and variables
 const char greeting[] = "Solar";
-const uint16_t refreshrate = 5000;
+const uint16_t refreshrate = 5; // Refresh rate in seconds, set to 5 seconds for testing, change to 3600 for hourly updates
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
@@ -293,16 +294,25 @@ void setup()
   
   // draw full screen greeter first
   drawGreeting();
-}
 
-void loop() {
   // Fetch data from InfluxDB
   fetchInfluxDB(ACdata);
+
+  // Disconnect WiFi to save power
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
 
   // Print actual values on display
   drawRefresh(ACdata);
 
-  // Wait for length of $refresharate
-  Serial.printf("Wait %i s\n", refreshrate);
-  delay(refreshrate);
+  // Print and enter deep sleep
+  Serial.printf("Going to deep sleep for %i s\n", refreshrate);
+  esp_sleep_enable_timer_wakeup((uint64_t)refreshrate * 1000 * 1000); // refreshrate is in s; sleeping time is in us
+  // Ensure all serial output is sent
+  Serial.flush();
+  esp_deep_sleep_start();
+}
+
+void loop() {
+  // Not used with deep sleep
 }
