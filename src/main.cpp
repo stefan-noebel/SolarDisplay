@@ -52,10 +52,12 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 #include "GxEPD2_display_selection_new_style.h"
 
 //Define global constants and variables
-const char greeting[] = "Solar";
+//const char greeting[] = "Solar";
 const uint16_t refreshrate = 10; // Refresh rate in seconds, set to 10 s for testing, change to 600 for 10 min updates
 int16_t tbx, tby;
 uint16_t tbw, tbh;
+
+RTC_DATA_ATTR uint16_t bootCount = 0;
 
 //double_t ACpower = 0;
 //double_t ACtotal = 0;
@@ -243,7 +245,11 @@ void setup()
   Serial.begin(115200);
   pinMode(D2, INPUT_PULLUP);
 
+  ++bootCount;
+  Serial.printf("Boot number: %i \n", bootCount);
+
   // Check for upload mode before deep sleep
+  // Enter upload mode by connecting D2 to GND, open 'screen /dev/ttyACM0' to allow dfu-util to upload firmware
   if (digitalRead(D2) == LOW) {
     delay(5000);
     Serial.println("UPLOAD MODE: Staying awake 30 s for firmware upload/debug.");
