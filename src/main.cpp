@@ -286,10 +286,7 @@ void setup()
     Serial.println(client.getLastErrorMessage());
   }
   
-  display.init(115200, true, 2, false);
-  display.setRotation(1); //0 is 'portrait'
-  
-  // Fetch data from InfluxDB
+    // Fetch data from InfluxDB
   fetchInfluxDB(ACdata);
 
   // Disconnect WiFi to save power
@@ -297,6 +294,8 @@ void setup()
   WiFi.mode(WIFI_OFF);
 
   // Print actual values on display
+  display.init(115200, true, 2, false);
+  display.setRotation(1); //0 is 'portrait'
   drawRefresh(ACdata);
 
   // Print and enter deep sleep
