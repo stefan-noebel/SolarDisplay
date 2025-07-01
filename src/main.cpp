@@ -69,29 +69,6 @@ struct SolarData {
 
 SolarData ACdata;
 
-// Print initial message in large text across the top of the screen
-void drawGreeting()
-{
-  display.setFont(&FreeSansBold32pt7b); //This almost fills the screen with "Wednesday"
-  display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
-  display.getTextBounds(greeting, 0, 0, &tbx, &tby, &tbw, &tbh);
-  // center the bounding box by transposition of the origin:
-  uint16_t x1 = ((display.width() - tbw) / 2) - tbx;  // centres the text
-  uint16_t y1 = ((display.height() - tbh) / 4) - tby; // Aligned in top half
-  display.setFullWindow();
-  display.firstPage();
-  do // Print the upper part of the screen
-  {
-    display.fillScreen(GxEPD_WHITE);
-    display.setCursor(x1, y1);
-    display.print(greeting);
-  }
-  while (display.nextPage());
-
-  //sent display to sleep
-  display.hibernate();
-}
-
 // Print actual data
 void drawRefresh(SolarData &data){
 
@@ -102,8 +79,8 @@ void drawRefresh(SolarData &data){
   // ~~~(1) Funktion fetchinfluxdb ausgliedern~~~
   // (2) Code bereinigen und auf Github etc.
   // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
-  // (3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup
-  // (3) Upload mode per PIN setzen, um dfu-util nutzen zu können
+  // ~~~(3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup~~~
+  // ~~~(3) Upload mode per PIN setzen, um dfu-util nutzen zu können~~~
   // (4) Ladeschaltung verbinden
 
   //char countText[8];
@@ -306,9 +283,6 @@ void setup()
   display.init(115200, true, 2, false);
   display.setRotation(1); //0 is 'portrait'
   
-  // draw full screen greeter first
-  //drawGreeting();
-
   // Fetch data from InfluxDB
   fetchInfluxDB(ACdata);
 
