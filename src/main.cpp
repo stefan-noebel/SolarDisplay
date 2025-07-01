@@ -6,6 +6,7 @@
 // Wiring for AVR, UNO, NANO etc.
 // BUSY -> 7, RST -> 9, DC -> 8, CS-> 10, CLK -> 13, DIN -> 11
 #include <Arduino.h>
+#include <esp_sleep.h>
 #include <secrets.h> // Include secrets.h for WiFi and InfluxDB credentials
 
 
@@ -52,7 +53,7 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 
 //Define global constants and variables
 const char greeting[] = "Solar";
-const uint16_t refreshrate = 5000;
+const uint16_t refreshrate = 10; // Refresh rate in seconds, set to 10 s for testing, change to 600 for 10 min updates
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
@@ -68,29 +69,6 @@ struct SolarData {
 
 SolarData ACdata;
 
-// Print initial message in large text across the top of the screen
-void drawGreeting()
-{
-  display.setFont(&FreeSansBold32pt7b); //This almost fills the screen with "Wednesday"
-  display.setTextColor(GxEPD_BLACK, GxEPD_WHITE);
-  display.getTextBounds(greeting, 0, 0, &tbx, &tby, &tbw, &tbh);
-  // center the bounding box by transposition of the origin:
-  uint16_t x1 = ((display.width() - tbw) / 2) - tbx;  // centres the text
-  uint16_t y1 = ((display.height() - tbh) / 4) - tby; // Aligned in top half
-  display.setFullWindow();
-  display.firstPage();
-  do // Print the upper part of the screen
-  {
-    display.fillScreen(GxEPD_WHITE);
-    display.setCursor(x1, y1);
-    display.print(greeting);
-  }
-  while (display.nextPage());
-
-  //sent display to sleep
-  display.hibernate();
-}
-
 // Print actual data
 void drawRefresh(SolarData &data){
 
@@ -101,7 +79,8 @@ void drawRefresh(SolarData &data){
   // ~~~(1) Funktion fetchinfluxdb ausgliedern~~~
   // (2) Code bereinigen und auf Github etc.
   // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
-  // (3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup
+  // ~~~(3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup~~~
+  // ~~~(3) Upload mode per PIN setzen, um dfu-util nutzen zu können~~~
   // (4) Ladeschaltung verbinden
 
   //char countText[8];
@@ -262,6 +241,19 @@ void fetchInfluxDB(SolarData &data)
 void setup()
 {
   Serial.begin(115200);
+  pinMode(D2, INPUT_PULLUP);
+
+  // Check for upload mode before deep sleep
+  if (digitalRead(D2) == LOW) {
+    delay(5000);
+    Serial.println("UPLOAD MODE: Staying awake 30 s for firmware upload/debug.");
+    for (size_t i = 0; i < 30; i++)
+    {
+      Serial.print("."); // Print dots to indicate that the device is awake
+      delay(1000);
+    }
+    Serial.println();
+  }
  
   // Setup wifi
   WiFi.mode(WIFI_STA);
@@ -291,18 +283,24 @@ void setup()
   display.init(115200, true, 2, false);
   display.setRotation(1); //0 is 'portrait'
   
-  // draw full screen greeter first
-  drawGreeting();
-}
-
-void loop() {
   // Fetch data from InfluxDB
   fetchInfluxDB(ACdata);
+
+  // Disconnect WiFi to save power
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
 
   // Print actual values on display
   drawRefresh(ACdata);
 
-  // Wait for length of $refresharate
-  Serial.printf("Wait %i s\n", refreshrate);
-  delay(refreshrate);
+  // Print and enter deep sleep
+  Serial.printf("Going to deep sleep for %i s\n", refreshrate);
+  esp_sleep_enable_timer_wakeup((uint64_t)refreshrate * 1000 * 1000); // refreshrate is in s; sleeping time is in us
+  // Ensure all serial output is sent
+  Serial.flush();
+  esp_deep_sleep_start();
+}
+
+void loop() {
+  // Not used with deep sleep
 }
