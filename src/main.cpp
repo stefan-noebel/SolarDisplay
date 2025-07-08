@@ -53,7 +53,7 @@ InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKE
 
 //Define global constants and variables
 //const char greeting[] = "Solar";
-const uint16_t refreshrate = 10; // Refresh rate in seconds, set to 10 s for testing, change to 600 for 10 min updates
+const uint16_t refreshrate = 600; // Refresh rate in seconds, set to 10 s for testing, change to 600 for 10 min updates
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
