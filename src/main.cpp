@@ -79,12 +79,16 @@ void drawRefresh(SolarData &data){
   // ~~~(1) statisch und dynamisch trennen -> 2 Funktionen für unterschiedlichen Aufruf~~~
   // -> funtioniert nicht, da partial refresh nur für Koordinaten mit ganzahlige Vielfachen von 8 möglich sind
   // ~~~(1) Funktion fetchinfluxdb ausgliedern~~~
-  // (2) Code bereinigen und auf Github etc.
+  // ~~~(2) Code bereinigen und auf Github etc.~~~
   // (2) Serial: nützliche Debug-Ausgaben und Grunddaten 
   // ~~~(3) Deepsleep ausprobieren -> kein loop mehr sondern nur setup~~~
   // ~~~(3) Upload mode per PIN setzen, um dfu-util nutzen zu können~~~
-  // (4) Ladeschaltung verbinden
-
+  // ~~~(4) Ladeschaltung verbinden~~~
+  // (5) DeepSleep-Intervall bei fehlender Aktivität erhöhen (z.B. letzte Aktivität >30 min, dann Intervall 60 min)
+  // (6) Display-Update nur bei Änderung der Werte, z.B. wenn ACpower > 0 und Delta >xx%
+  // (7) Refactoring: komplett auf objektorientierte Programmierung umstellen, z.B. SolarDisplay-Klasse
+  // (8) Refactoring: Code in microPython umschreiben
+  
   //char countText[8];
   //snprintf(countText, sizeof(countText), "%3.1f W", ACpower);
   // Cacluclate bars sizes
